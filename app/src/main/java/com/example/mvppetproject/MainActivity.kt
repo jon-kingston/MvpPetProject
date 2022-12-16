@@ -7,7 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material.Button
-import com.example.mvppetproject.homeMVP.view.HomeFragment
+import com.example.mvppetproject.homeMVP.HomeFragment
 import com.example.mvppetproject.homeMVVM.HomeFragmentMVVM
 import com.github.terrakok.cicerone.NavigatorHolder
 import com.github.terrakok.cicerone.Router
@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
             requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        router.navigateTo(FragmentScreen{ HomeFragmentMVVM() })
+        router.navigateTo(FragmentScreen{ HomeFragment() })
     }
 
     private val requestPermissionLauncher =

@@ -3,12 +3,10 @@ package com.example.mvppetproject.homeMVVM
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,29 +32,42 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 @AndroidEntryPoint
-class HomeFragmentMVVM: Fragment() {
+class HomeFragmentMVVM : Fragment() {
     private val viewModel: HomeViewModel by viewModels()
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ) = ComposeView(requireContext()).apply {
         setContent {
-            HomeScreen(viewModel.cardList)
+            HomeScreen(viewModel.state)
         }
     }
 }
 
 @Composable
-private fun HomeScreen(itemsFlow: SharedFlow<List<CoverData>>) {
-    var listItems by remember { mutableStateOf(listOf<CoverData>()) }
+private fun HomeScreen(itemsFlow: SharedFlow<HomeState>) {
+    var state by remember { mutableStateOf<HomeState>(HomeState.Loading) }
 
-    val p = listOf(
-        CoverData.getEmpty,
-        CoverData.getEmpty,
-        CoverData.getEmpty,
-    )
+    LaunchedEffect(key1 = Unit) {
+        itemsFlow.collect {
+            state = it
+        }
+    }
 
-    LaunchedEffect(key1 = Unit) { itemsFlow.collect { listItems = it } }
+    when (state) {
+        is HomeState.Loading -> {
+            ProgressScreen()
+        }
+        is HomeState.DataLoaded -> {
+            ListDataScreen(listItems = (state as HomeState.DataLoaded).covers)
+        }
+        is HomeState.Error -> {
+            LoadingErrorScreen(error = (state as HomeState.Error).error)
+        }
+    }
+}
 
+@Composable
+private fun ListDataScreen(listItems: List<CoverData>) {
     Column {
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -94,25 +105,48 @@ private fun HomeScreen(itemsFlow: SharedFlow<List<CoverData>>) {
     }
 }
 
+@Composable
+private fun ProgressScreen() {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun LoadingErrorScreen(error: Throwable) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Text(text = error.toString())
+    }
+}
+
 @Preview(widthDp = 411, heightDp = 731, showBackground = true)
 @Composable
 private fun Preview_HomeScreen() {
-
-    val _cardList = MutableStateFlow(
-        listOf(
-            CoverData.getEmpty,
-            CoverData.getEmpty,
-            CoverData.getEmpty,
-        )
+    val previewList = listOf(
+        CoverData.getEmpty,
+        CoverData.getEmpty,
+        CoverData.getEmpty,
     )
-    val cardList: SharedFlow<List<CoverData>> = _cardList.asSharedFlow()
 
-    HomeScreen(cardList)
-    _cardList.tryEmit(
-        listOf(
-            CoverData.getEmpty,
-            CoverData.getEmpty,
-            CoverData.getEmpty,
-        )
+    ListDataScreen(previewList)
+}
+
+@Preview(widthDp = 411, heightDp = 731, showBackground = true)
+@Composable
+private fun Preview_ProgressScreen() {
+    ProgressScreen()
+}
+
+@Preview(widthDp = 411, heightDp = 731, showBackground = true)
+@Composable
+private fun Preview_LoadingErrorScreen() {
+    LoadingErrorScreen(
+        Throwable()
     )
 }

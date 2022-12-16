@@ -1,14 +1,12 @@
-package com.example.mvppetproject.homeMVP.view
+package com.example.mvppetproject.homeMVP
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,8 +26,9 @@ import coil.size.Size
 import com.example.mvppetproject.R
 import com.example.mvppetproject.api.Api
 import com.example.mvppetproject.base.BaseFragment
-import com.example.mvppetproject.homeMVP.contract.HomeContract
-import com.example.mvppetproject.homeMVP.presenter.HomePresenter
+import com.example.mvppetproject.homeMVP.HomeContract
+import com.example.mvppetproject.homeMVP.HomePresenter
+import com.example.mvppetproject.homeMVVM.HomeState
 import com.example.mvppetproject.model.CoverData
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.channels.BufferOverflow
@@ -44,25 +43,30 @@ class HomeFragment : BaseFragment(), HomeContract.View {
 
     private var presenter: HomeContract.Presenter? = null
 
-    @Inject
-    lateinit var repository: Api
-
-    private val _cardList = MutableSharedFlow<List<CoverData>>(
+    private val _state = MutableSharedFlow<HomeState>(
         replay = 1, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.SUSPEND
     )
-    val cardList: SharedFlow<List<CoverData>> = _cardList.asSharedFlow()
+    val state: SharedFlow<HomeState> = _state.asSharedFlow()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ) = ComposeView(requireContext()).apply {
-        presenter = HomePresenter(this@HomeFragment, repository)
+        presenter = HomePresenter(this@HomeFragment)
         setContent {
-            HomeScreen(cardList)
+            HomeScreen(state)
         }
     }
 
     override fun showCovers(covers: List<CoverData>) {
-        _cardList.tryEmit(covers)
+        _state.tryEmit(HomeState.DataLoaded(covers))
+    }
+
+    override fun showProgress() {
+        _state.tryEmit(HomeState.Loading)
+    }
+
+    override fun showError(error: Throwable) {
+        _state.tryEmit(HomeState.Error(error))
     }
 
     override fun getScope() = lifecycleScope
@@ -74,17 +78,30 @@ class HomeFragment : BaseFragment(), HomeContract.View {
 }
 
 @Composable
-private fun HomeScreen(itemsFlow: SharedFlow<List<CoverData>>) {
-    var listItems by remember { mutableStateOf(listOf<CoverData>()) }
+private fun HomeScreen(itemsFlow: SharedFlow<HomeState>) {
+    var state by remember { mutableStateOf<HomeState>(HomeState.Loading) }
 
-    val p = listOf(
-        CoverData.getEmpty,
-        CoverData.getEmpty,
-        CoverData.getEmpty,
-    )
+    LaunchedEffect(key1 = Unit) {
+        itemsFlow.collect {
+            state = it
+        }
+    }
 
-    LaunchedEffect(key1 = Unit) { itemsFlow.collect { listItems = it } }
+    when (state) {
+        is HomeState.Loading -> {
+            ProgressScreen()
+        }
+        is HomeState.DataLoaded -> {
+            ListDataScreen(listItems = (state as HomeState.DataLoaded).covers)
+        }
+        is HomeState.Error -> {
+            LoadingErrorScreen(error = (state as HomeState.Error).error)
+        }
+    }
+}
 
+@Composable
+private fun ListDataScreen(listItems: List<CoverData>) {
     Column {
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -122,25 +139,48 @@ private fun HomeScreen(itemsFlow: SharedFlow<List<CoverData>>) {
     }
 }
 
+@Composable
+private fun ProgressScreen() {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun LoadingErrorScreen(error: Throwable) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Text(text = error.toString())
+    }
+}
+
 @Preview(widthDp = 411, heightDp = 731, showBackground = true)
 @Composable
 private fun Preview_HomeScreen() {
-
-    val _cardList = MutableStateFlow(
-        listOf(
-            CoverData.getEmpty,
-            CoverData.getEmpty,
-            CoverData.getEmpty,
-        )
+    val previewList = listOf(
+        CoverData.getEmpty,
+        CoverData.getEmpty,
+        CoverData.getEmpty,
     )
-    val cardList: SharedFlow<List<CoverData>> = _cardList.asSharedFlow()
 
-    HomeScreen(cardList)
-    _cardList.tryEmit(
-        listOf(
-            CoverData.getEmpty,
-            CoverData.getEmpty,
-            CoverData.getEmpty,
-        )
+    ListDataScreen(previewList)
+}
+
+@Preview(widthDp = 411, heightDp = 731, showBackground = true)
+@Composable
+private fun Preview_ProgressScreen() {
+    ProgressScreen()
+}
+
+@Preview(widthDp = 411, heightDp = 731, showBackground = true)
+@Composable
+private fun Preview_LoadingErrorScreen() {
+    LoadingErrorScreen(
+        Throwable()
     )
 }

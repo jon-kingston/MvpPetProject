@@ -7,6 +7,7 @@ import com.example.mvppetproject.helpers.log
 import com.example.mvppetproject.model.CoverData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -17,16 +18,20 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val api: Api
 ) : ViewModel() {
-    private val _cardList = MutableSharedFlow<List<CoverData>>(
+    private val _state = MutableSharedFlow<HomeState>(
         replay = 1, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.SUSPEND
     )
-    val cardList: SharedFlow<List<CoverData>> = _cardList.asSharedFlow()
+    val state: SharedFlow<HomeState> = _state.asSharedFlow()
+
 
     init {
         viewModelScope.launch {
+            delay(400)
             kotlin.runCatching { api.getCovers() }
-                .onSuccess { _cardList.tryEmit(it) }
-                .onFailure { log("loading ERROR $it") }
+                .onSuccess {
+                    _state.tryEmit(HomeState.DataLoaded(it))
+                }
+                .onFailure { _state.tryEmit(HomeState.Error(it)) }
         }
     }
 }
