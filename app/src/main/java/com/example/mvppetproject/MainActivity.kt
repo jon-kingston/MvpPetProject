@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
             requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        router.navigateTo(FragmentScreen{ HomeFragment() })
+        router.navigateTo(FragmentScreen{ HomeFragmentMVVM() })
     }
 
     private val requestPermissionLauncher =

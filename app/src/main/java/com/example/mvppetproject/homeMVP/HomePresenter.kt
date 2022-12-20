@@ -10,7 +10,7 @@ import javax.inject.Inject
 
 class HomePresenter(private val mView: HomeContract.View) : HomeContract.Presenter {
 
-    val repository = ApiRepository()
+    private val repository = ApiRepository()
 
     init {
         mView.showProgress()

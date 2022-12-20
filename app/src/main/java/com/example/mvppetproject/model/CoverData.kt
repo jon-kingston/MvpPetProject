@@ -5,7 +5,7 @@ data class CoverData(
     val description: String?,
     val image: String?,
     val rating: Double?,
-    val textId: String?,
+    val textId: String,
     val title: String?
 ) {
     companion object {

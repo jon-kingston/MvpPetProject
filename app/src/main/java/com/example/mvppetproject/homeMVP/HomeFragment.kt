@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Size
+import com.example.mvppetproject.HomeScreen
 import com.example.mvppetproject.R
 import com.example.mvppetproject.api.Api
 import com.example.mvppetproject.base.BaseFragment
@@ -32,10 +33,7 @@ import com.example.mvppetproject.homeMVVM.HomeState
 import com.example.mvppetproject.model.CoverData
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -43,17 +41,15 @@ class HomeFragment : BaseFragment(), HomeContract.View {
 
     private var presenter: HomeContract.Presenter? = null
 
-    private val _state = MutableSharedFlow<HomeState>(
-        replay = 1, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.SUSPEND
-    )
-    val state: SharedFlow<HomeState> = _state.asSharedFlow()
+    private val _state = MutableStateFlow<HomeState>(HomeState.Loading)
+    val state: StateFlow<HomeState> = _state
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ) = ComposeView(requireContext()).apply {
         presenter = HomePresenter(this@HomeFragment)
         setContent {
-            HomeScreen(state)
+            HomeScreen(state.collectAsState().value)
         }
     }
 
@@ -75,112 +71,4 @@ class HomeFragment : BaseFragment(), HomeContract.View {
         super.onDestroy()
         presenter?.onDestroy()
     }
-}
-
-@Composable
-private fun HomeScreen(itemsFlow: SharedFlow<HomeState>) {
-    var state by remember { mutableStateOf<HomeState>(HomeState.Loading) }
-
-    LaunchedEffect(key1 = Unit) {
-        itemsFlow.collect {
-            state = it
-        }
-    }
-
-    when (state) {
-        is HomeState.Loading -> {
-            ProgressScreen()
-        }
-        is HomeState.DataLoaded -> {
-            ListDataScreen(listItems = (state as HomeState.DataLoaded).covers)
-        }
-        is HomeState.Error -> {
-            LoadingErrorScreen(error = (state as HomeState.Error).error)
-        }
-    }
-}
-
-@Composable
-private fun ListDataScreen(listItems: List<CoverData>) {
-    Column {
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(
-                top = 22.dp, start = 18.dp, end = 18.dp, bottom = 22.dp
-            )
-        ) {
-            items(listItems) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current).data(it.image)
-                        .crossfade(true).size(Size.ORIGINAL).build(),
-                    contentDescription = "Photo",
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = painterResource(R.drawable.ic_launcher_background),
-                    contentScale = ContentScale.FillWidth,
-                    alignment = Alignment.Center
-                )
-                Text(
-                    text = it.title ?: "",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = it.description ?: "",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp, bottom = 12.dp),
-                    fontSize = 14.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProgressScreen() {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun LoadingErrorScreen(error: Throwable) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Text(text = error.toString())
-    }
-}
-
-@Preview(widthDp = 411, heightDp = 731, showBackground = true)
-@Composable
-private fun Preview_HomeScreen() {
-    val previewList = listOf(
-        CoverData.getEmpty,
-        CoverData.getEmpty,
-        CoverData.getEmpty,
-    )
-
-    ListDataScreen(previewList)
-}
-
-@Preview(widthDp = 411, heightDp = 731, showBackground = true)
-@Composable
-private fun Preview_ProgressScreen() {
-    ProgressScreen()
-}
-
-@Preview(widthDp = 411, heightDp = 731, showBackground = true)
-@Composable
-private fun Preview_LoadingErrorScreen() {
-    LoadingErrorScreen(
-        Throwable()
-    )
 }
