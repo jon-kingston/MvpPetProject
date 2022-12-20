@@ -33,35 +33,30 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 @AndroidEntryPoint
 class HomeFragmentMVVM : Fragment() {
+
     private val viewModel: HomeViewModel by viewModels()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ) = ComposeView(requireContext()).apply {
         setContent {
-            HomeScreen(viewModel.state)
+            HomeScreen(viewModel.state.collectAsState().value)
         }
     }
+
 }
 
 @Composable
-private fun HomeScreen(itemsFlow: SharedFlow<HomeState>) {
-    var state by remember { mutableStateOf<HomeState>(HomeState.Loading) }
-
-    LaunchedEffect(key1 = Unit) {
-        itemsFlow.collect {
-            state = it
-        }
-    }
-
+private fun HomeScreen(state: HomeState) {
     when (state) {
         is HomeState.Loading -> {
             ProgressScreen()
         }
         is HomeState.DataLoaded -> {
-            ListDataScreen(listItems = (state as HomeState.DataLoaded).covers)
+            ListDataScreen(state.covers)
         }
         is HomeState.Error -> {
-            LoadingErrorScreen(error = (state as HomeState.Error).error)
+            LoadingErrorScreen(state.error)
         }
     }
 }
@@ -75,7 +70,7 @@ private fun ListDataScreen(listItems: List<CoverData>) {
                 top = 22.dp, start = 18.dp, end = 18.dp, bottom = 22.dp
             )
         ) {
-            items(listItems) {
+            items(listItems) {//todo key = { it.textId!! }
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current).data(it.image)
                         .crossfade(true).size(Size.ORIGINAL).build(),

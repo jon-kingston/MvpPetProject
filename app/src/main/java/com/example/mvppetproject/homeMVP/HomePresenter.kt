@@ -16,7 +16,8 @@ class HomePresenter(private val mView: HomeContract.View) : HomeContract.Present
         mView.showProgress()
         mView.getScope().launch(Dispatchers.IO) {
             log("testPresenter")
-            kotlin.runCatching { repository.getCovers() }.onSuccess { mView.showCovers(it) }
+            runCatching { repository.getCovers() }
+                .onSuccess { mView.showCovers(it) }
                 .onFailure { mView.showError(it) }
         }
     }
