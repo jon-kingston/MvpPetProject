@@ -9,6 +9,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.material.Button
 import com.example.mvppetproject.homeMVP.HomeFragment
 import com.example.mvppetproject.homeMVVM.HomeFragmentMVVM
+import com.example.mvppetproject.patterns.builder.SearchConfig
+import com.example.mvppetproject.patterns.builder.SearchConfigBuilder
+import com.example.mvppetproject.patterns.builder.SearchType
 import com.github.terrakok.cicerone.NavigatorHolder
 import com.github.terrakok.cicerone.Router
 import com.github.terrakok.cicerone.androidx.AppNavigator
@@ -31,6 +34,12 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
+
+        val searchConfig: SearchConfig = SearchConfigBuilder()
+            .setQuery("")
+            .setRating(5)
+            .setType(SearchType.All)
+            .build()
 
         router.navigateTo(FragmentScreen{ HomeFragmentMVVM() })
     }
